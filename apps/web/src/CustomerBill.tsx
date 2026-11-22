@@ -6,6 +6,7 @@ export type CustomerBillData = {
   dealer?: string;
   bill_date?: string;
   total_due?: string;
+  balance?: string;
   sale_date?: string;
   created_at?: string;
   current_total?: string;
@@ -25,6 +26,6 @@ export function CustomerBill({ bill }: { bill: CustomerBillData }) {
     <header className="invoice-header">{dealer && <span className="invoice-type">DEALER BILL</span>}<img src="/giri-fruits-logo.png" alt="Giri Fruits logo"/><div className="invoice-heading"><h1>గిరి ఫ్రూట్స్</h1><h2>ఏలూరు</h2><p>ఓవర్ బ్రిడ్జి డౌన్, దంరో పక్కన, ఏలూరు</p></div></header>
     <div className="invoice-meta"><span><b>Date:</b> {date}</span><span><b>Time:</b> {time}</span><span><b>Name:</b> {bill.customer || bill.dealer || '—'}</span><span><b>Bill no:</b> {dealer ? 'DB' : 'GF'}-{String(bill.id).padStart(5,'0')}</span></div>
     <table className="invoice-table"><thead><tr><th>S.No</th><th>Item</th><th>Cost per box</th><th>Quantity<br/>(boxes)</th><th>Total cost</th></tr></thead><tbody>{bill.items?.map((item,index)=><tr key={index}><td>{index+1}</td><td>{item.fruit}</td><td>{money(item.price_per_box)}</td><td>{item.quantity}</td><td>{money(item.total_price)}</td></tr>)}</tbody></table>
-    <div className="invoice-totals"><div><span>Current bill</span><b>{money(bill.current_total)}</b></div><div><span>Previous outstanding</span><b>{money(bill.previous_due)}</b></div><div className="invoice-grand"><span>Total amount</span><b>{money(bill.total_bill ?? bill.total_due)}</b></div><div><span>Paid towards current bill</span><b>{money(bill.amount_paid)}</b></div><div className="invoice-grand"><span>To pay</span><b>{money(Number(bill.total_bill ?? bill.total_due ?? 0) - Number(bill.amount_paid || 0))}</b></div></div>
+    <div className="invoice-totals"><div><span>Total boxes (మొత్తం శాల్తీలు)</span><b>{(bill.items||[]).reduce((sum,item)=>sum+Number(item.quantity||0),0)}</b></div><div><span>Total cost</span><b>{money(bill.current_total)}</b></div><div><span>Balance (బాకీ)</span><b>{money(bill.previous_due)}</b></div><div className="invoice-grand"><span>Total amount</span><b>{money(bill.total_bill ?? bill.total_due)}</b></div><div><span>Paid amount (చెల్లించిన అమౌంట్)</span><b>{money(bill.amount_paid)}</b></div><div className="invoice-grand"><span>To pay (చెల్లించాల్సిన అమౌంట్)</span><b>{money(Number(bill.total_bill ?? bill.total_due ?? 0) - Number(bill.amount_paid || 0))}</b></div></div>
   </article>;
 }
