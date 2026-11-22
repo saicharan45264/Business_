@@ -1,0 +1,3 @@
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(18,2) NOT NULL DEFAULT 0 CHECK(amount_paid>=0);
+ALTER TABLE dealer_bills ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(18,2) NOT NULL DEFAULT 0 CHECK(amount_paid>=0);
+WITH paid AS (SELECT retailer_id,SUM(amount) AS amount FROM receipts GROUP BY retailer_id), ordered AS (SELECT s.id,s.retailer_id,s.total,COALESCE(p.amount,0) AS paid,SUM(s.total) OVER(PARTITION BY s.retailer_id ORDER BY s.sale_date,s.id ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prior FROM sales s LEFT JOIN paid p ON p.retailer_id=s.retailer_id) UPDATE sales s SET amount_paid=LEAST(o.total,GREATEST(o.paid-COALESCE(o.prior,0),0)) FROM ordered o WHERE s.id=o.id;
