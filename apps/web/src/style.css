@@ -26,7 +26,7 @@ h3{font-size:1.1rem}
 .invoice-grand{font-size:20px}
 .invoice-type{font-size:13px}
 @media(max-width:600px){:root{font-size:18px}.app-header h1{font-size:1.6rem}.customer-bill-document{font-size:16px}.invoice-heading h1{font-size:27px}.invoice-heading h2{font-size:19px}.invoice-heading p{font-size:15px}}
-:root{font-size:22px}
+:root{font-size:20px}
 .app-header h1{font-size:2.15rem}
 .customer-bill-document{font-size:20px}
 .invoice-heading h1{font-size:38px}
@@ -34,7 +34,7 @@ h3{font-size:1.1rem}
 .invoice-heading p{font-size:20px}
 .invoice-grand{font-size:22px}
 .invoice-type{font-size:15px}
-@media(max-width:600px){:root{font-size:20px}.app-header h1{font-size:1.6rem}.customer-bill-document{font-size:18px}.invoice-heading h1{font-size:30px}.invoice-heading h2{font-size:21px}.invoice-heading p{font-size:17px}}
+@media(max-width:600px){:root{font-size:18px}.app-header h1{font-size:1.6rem}.customer-bill-document{font-size:18px}.invoice-heading h1{font-size:30px}.invoice-heading h2{font-size:21px}.invoice-heading p{font-size:17px}}
 .directory-filters{display:flex;gap:20px;flex-wrap:wrap;margin:18px 0}.directory-filters label{display:grid;gap:8px}.directory-filters input{min-width:260px}
 .delete-link{color:#a32626;margin-left:16px}
 /* Keep item descriptions on one line in the preview and exported bill. */
