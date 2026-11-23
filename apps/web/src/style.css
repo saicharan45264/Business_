@@ -46,3 +46,8 @@ h3{font-size:1.1rem}
 .invoice-table th,.invoice-table td{white-space:nowrap}
 .invoice-totals{width:max-content;min-width:540px;max-width:none}
 .invoice-totals>div{white-space:nowrap;gap:36px}
+
+.button-spinner{display:inline-block;width:1em;height:1em;box-sizing:border-box;margin-right:.4em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-.12em;animation:button-spin .7s linear infinite}
+@keyframes button-spin{to{transform:rotate(360deg)}}
+button:disabled[aria-busy="true"]{cursor:wait;opacity:.75}
+@media (prefers-reduced-motion:reduce){.button-spinner{animation-duration:1.5s}}
