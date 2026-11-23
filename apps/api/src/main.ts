@@ -5,6 +5,7 @@ import { Type } from 'class-transformer';
 import { IsArray, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Min, ValidateNested, ArrayMinSize, Matches, IsDateString } from 'class-validator';
 import { Pool, PoolClient } from 'pg';
 import { execFile } from 'node:child_process';
+import { passwordGuard } from './auth';
 
 if (process.env.VERCEL && !process.env.DATABASE_URL) throw new Error('DATABASE_URL must be configured for Vercel');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL ?? 'postgresql://giri:local_development_only@localhost:55432/giri_fruits', max: process.env.VERCEL ? 2 : 10 });
@@ -58,4 +59,4 @@ class AppController {
  @Get('retailers/:id/statement') async statement(@Param('id') id:string){if(!/^\d+$/.test(id)) throw new BadRequestException('Invalid retailer');const r=await pool.query(`SELECT p.id,p.name, COALESCE((SELECT SUM(total) FROM sales WHERE retailer_id=p.id AND deleted_at IS NULL),0)::text AS sales, COALESCE((SELECT SUM(amount) FROM receipts WHERE retailer_id=p.id),0)::text AS receipts, (p.opening_balance+COALESCE((SELECT SUM(total-amount_paid) FROM sales WHERE retailer_id=p.id AND deleted_at IS NULL),0))::text AS balance FROM parties p WHERE p.id=$1 AND p.role='retailer'`,[id]);if(!r.rowCount)throw new BadRequestException('Retailer not found');return r.rows[0];}
 }
 @Module({controllers:[AppController]}) class AppModule {}
-async function bootstrap(){const app=await NestFactory.create(AppModule);if(process.env.FRONTEND_ORIGIN)app.enableCors({origin:process.env.FRONTEND_ORIGIN.split(',').map(x=>x.trim()).filter(Boolean)});app.setGlobalPrefix('api/v1');app.useGlobalPipes(new ValidationPipe({whitelist:true,forbidNonWhitelisted:true,transform:true}));await app.listen(Number(process.env.PORT||3000),'127.0.0.1');} bootstrap();
+async function bootstrap(){const app=await NestFactory.create(AppModule);if(process.env.FRONTEND_ORIGIN)app.enableCors({origin:process.env.FRONTEND_ORIGIN.split(',').map(x=>x.trim()).filter(Boolean)});if(process.env.VERCEL||process.env.APP_PASSWORD)app.use(passwordGuard(pool));app.setGlobalPrefix('api/v1');app.useGlobalPipes(new ValidationPipe({whitelist:true,forbidNonWhitelisted:true,transform:true}));await app.listen(Number(process.env.PORT||3000),'127.0.0.1');} bootstrap();
