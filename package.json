@@ -14,6 +14,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@neon/config": "^1.14.6",
+    "@neon/env": "^2.1.9",
     "@nestjs/common": "^10.4.22",
     "@nestjs/core": "^10.4.22",
     "@nestjs/platform-express": "^10.4.22",

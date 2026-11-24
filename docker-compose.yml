@@ -12,9 +12,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./database/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U giri -d giri_fruits"]
+      test: [ "CMD-SHELL", "pg_isready -U giri -d giri_fruits" ]
       interval: 5s
       timeout: 5s
       retries: 10
 volumes:
   postgres_data:
+
