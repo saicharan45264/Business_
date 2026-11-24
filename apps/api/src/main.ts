@@ -5,7 +5,7 @@ import { Type } from 'class-transformer';
 import { IsArray, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Min, ValidateNested, ArrayMinSize, Matches, IsDateString } from 'class-validator';
 import { Pool, PoolClient } from 'pg';
 import { execFile } from 'node:child_process';
-import { passwordGuard } from './auth';
+import { createSessionToken, passwordGuard } from './auth';
 
 if (process.env.VERCEL && !process.env.DATABASE_URL) throw new Error('DATABASE_URL must be configured for Vercel');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL ?? 'postgresql://giri:local_development_only@localhost:55432/giri_fruits', max: process.env.VERCEL ? 2 : 10 });
@@ -53,6 +53,7 @@ async function reassignSoldBoxes(c:PoolClient, source:any, required:number, excl
 @Controller()
 class AppController {
  @Get('backup/download') async downloadBackup(@Res() res:any){if(process.env.VERCEL)throw new ServiceUnavailableException('Local Docker backup is not available in the hosted deployment. Use your database provider backups.');const archive=await new Promise<Buffer>((resolve,reject)=>{execFile('docker',['compose','exec','-T','postgres','pg_dump','-U','giri','-d','giri_fruits','-Fc'],{encoding:'buffer',maxBuffer:256*1024*1024},(error,stdout)=>error?reject(error):resolve(stdout));}).catch(()=>{throw new ServiceUnavailableException('Backup failed. Check Docker and database availability.');});if(!archive.length)throw new ServiceUnavailableException('Backup was empty');const date=new Date().toISOString().replace(/[:.]/g,'-');res.setHeader('Content-Type','application/octet-stream');res.setHeader('Content-Disposition',`attachment; filename="giri-fruits-${date}.dump"`);res.setHeader('Cache-Control','no-store');res.send(archive);}
+ @Post('auth/session') async createSession() { return {token:createSessionToken()}; }
  @Get('health') async health() { await pool.query('SELECT 1'); return {status:'ok'}; }
  @Get('products') async products(){ return (await pool.query('SELECT * FROM products WHERE archived_at IS NULL ORDER BY name')).rows; }
  @Post('products') async product(@Body() d:ProductDto){try{return (await pool.query('INSERT INTO products(name) VALUES($1) RETURNING *',[d.name])).rows[0];}catch(e:any){if(e.code==='23505')throw new BadRequestException('A fruit with this name already exists');if(e.code==='23514')throw new BadRequestException('Enter a valid fruit name');throw e;}}

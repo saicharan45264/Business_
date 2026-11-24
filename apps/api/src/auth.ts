@@ -1,5 +1,24 @@
-import { scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { Pool } from 'pg';
+
+const SESSION_LIFETIME_MS = 12 * 60 * 60 * 1000;
+function sessionKey():Buffer { return scryptSync(process.env.APP_PASSWORD || '', 'giri-fruits-session-v1', 32); }
+export function createSessionToken():string {
+  const payload=Buffer.from(JSON.stringify({exp:Date.now()+SESSION_LIFETIME_MS,nonce:randomBytes(16).toString('hex')})).toString('base64url');
+  const signature=createHmac('sha256',sessionKey()).update(payload).digest('base64url');
+  return `session.${payload}.${signature}`;
+}
+function validSessionToken(token:string):boolean {
+  try {
+    const [prefix,payload,signature,...extra]=token.split('.');
+    if(prefix!=='session'||!payload||!signature||extra.length)return false;
+    const expected=createHmac('sha256',sessionKey()).update(payload).digest();
+    const actual=Buffer.from(signature,'base64url');
+    if(actual.length!==expected.length||!timingSafeEqual(actual,expected))return false;
+    const decoded=JSON.parse(Buffer.from(payload,'base64url').toString('utf8'));
+    return Number.isSafeInteger(decoded.exp)&&decoded.exp>Date.now()&&decoded.exp<=Date.now()+SESSION_LIFETIME_MS;
+  } catch {return false;}
+}
 
 // A shared password is intentionally kept in memory only by the browser.
 // Attempts are counted in PostgreSQL so limits apply across serverless instances.
@@ -12,6 +31,10 @@ export function passwordGuard(pool: Pool) {
     if (req.method === 'OPTIONS') return next();
     const supplied = String(req.headers.authorization || '').replace(/^Bearer /, '');
     if (!supplied || supplied.length > 200) return res.status(401).json({ message: 'Password required' });
+    if(supplied.startsWith('session.')) {
+      if(!validSessionToken(supplied))return res.status(401).json({message:'Session expired. Please sign in again.'});
+      res.setHeader('Cache-Control','no-store');return next();
+    }
     let candidate: string;
     try { candidate = Buffer.from(supplied, 'base64').toString('utf8'); } catch { return res.status(401).end(); }
     const client = await pool.connect();
