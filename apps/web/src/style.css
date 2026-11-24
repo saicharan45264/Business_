@@ -83,3 +83,5 @@ button:disabled[aria-busy="true"]{cursor:wait;opacity:.75}
  .bill-paper .invoice-totals .invoice-grand{font-size:15px}
  .bill-paper .bill-actions{flex-wrap:wrap}
 }
+
+.statement-paper{background:#fff;color:#1a2720;width:min(1200px,96vw);max-height:90vh;overflow:auto;padding:24px;box-sizing:border-box}.statement-scroll{overflow:auto;max-width:100%}.statement-report{background:#fff;min-width:760px;padding:20px;box-sizing:border-box}.statement-report .summary{display:flex;flex-wrap:wrap;gap:12px}.statement-report .summary>div{padding:12px;background:#eaf3ec}.statement-report .summary strong{display:block}@media(max-width:650px){.statement-paper{padding:12px;width:98vw}.statement-paper .bill-filters{display:flex;flex-wrap:wrap}}
