@@ -101,3 +101,5 @@ button:disabled[aria-busy="true"]{cursor:wait;opacity:.75}
 .app-brand h2{margin:0;color:#b21e1e;font-size:1.1rem;line-height:1.15}
 .invoice-heading .invoice-tagline{margin:0 0 2px;padding:0;border:0;color:#52665a;font-size:18px;font-weight:600;line-height:1.3}
 @media(max-width:600px){.invoice-heading .invoice-tagline{font-size:15px}}
+
+.stock-date-actions{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:8px 0 12px}.stock-date-actions label{display:grid;gap:6px}.stock-date-actions button{white-space:nowrap}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatBusinessDate } from './billDates';
 
 export type CustomerBillData = {
   id: string;
@@ -21,7 +22,7 @@ export type CustomerBillData = {
 const money = (amount: unknown) => `₹${Number(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 export function CustomerBill({ bill }: { bill: CustomerBillData }) {
   const billDate = bill.sale_date || bill.bill_date;
-  const date = billDate ? billDate.slice(0, 10).split('-').reverse().join('/') : '—';
+  const date = formatBusinessDate(billDate);
   const dealer = Boolean(bill.dealer);
   const time = bill.created_at ? new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date(bill.created_at)) : '—';
   return <article className="customer-bill-document">

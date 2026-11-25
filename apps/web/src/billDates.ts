@@ -5,6 +5,13 @@ export function indiaBusinessDate(now = new Date()): string {
   return `${value('year')}-${value('month')}-${value('day')}`;
 }
 
+/** Format an ISO business date for display without timezone conversion. */
+export function formatBusinessDate(value: string | null | undefined): string {
+  if (!value) return '—';
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : String(value);
+}
+
 export function billPeriodRange(today: string, period: string): {from:string;to:string} {
   const [year,month,day]=today.split('-').map(Number);
   const date=new Date(Date.UTC(year,month-1,day));
