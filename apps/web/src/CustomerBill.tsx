@@ -21,7 +21,7 @@ export type CustomerBillData = {
 };
 
 const money = (amount: unknown) => `₹${Number(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const quantity = (value: number, unit?: 'box' | 'kg') => `${Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 3 })} ${unit === 'kg' ? 'kg' : 'boxes'}`;
+const quantity = (value: number, unit?: 'box' | 'kg') => `${Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 3 })}${unit === 'kg' ? ' kg' : ''}`;
 export function CustomerBill({ bill }: { bill: CustomerBillData }) {
   const billDate = bill.sale_date || bill.bill_date;
   const date = formatBusinessDate(billDate);
@@ -32,7 +32,7 @@ export function CustomerBill({ bill }: { bill: CustomerBillData }) {
     totals[unit] += Number(item.quantity || 0);
     return totals;
   }, { kg: 0, box: 0 });
-  const quantitySummary = [quantities.kg ? quantity(quantities.kg, 'kg') : '', quantities.box ? quantity(quantities.box, 'box') : ''].filter(Boolean).join(' + ') || '0 boxes';
+  const quantitySummary = [quantities.kg ? quantity(quantities.kg, 'kg') : '', quantities.box ? quantity(quantities.box, 'box') : ''].filter(Boolean).join(' + ') || '0';
   const units = new Set((bill.items || []).map(item => item.quantity_unit === 'kg' ? 'kg' : 'box'));
   const costLabel = units.size > 1 ? 'Cost per unit' : units.has('kg') ? 'Cost per kg' : 'Cost per box';
   return <article className="customer-bill-document">
