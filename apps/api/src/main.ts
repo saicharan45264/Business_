@@ -151,6 +151,44 @@ class AppController {
   });
  }
  @Get('suppliers/:id/payment-history') async supplierPaymentHistory(@Param('id') id:string){if(!/^\d+$/.test(id))throw new BadRequestException('Invalid dealer');const exists=await pool.query("SELECT id FROM parties WHERE id=$1 AND role='supplier'",[id]);if(!exists.rowCount)throw new BadRequestException('Dealer not found');return (await pool.query(`WITH base AS (SELECT p.id, p.opening_balance+p.balance_adjustment+COALESCE((SELECT SUM(q.boxes*q.unit_cost) FROM purchases q WHERE q.supplier_id=p.id AND q.dealer_bill_id IS NULL AND q.is_demo=FALSE),0)+COALESCE((SELECT SUM(b.current_total) FROM dealer_bills b WHERE b.dealer_id=p.id AND b.deleted_at IS NULL),0) AS total_due FROM parties p WHERE p.id=$1), payments AS (SELECT sp.id,sp.paid_on AS payment_date,sp.created_at,sp.amount,sp.cash_paid AS cash,sp.account_paid AS account,sp.dealer_bill_id,'recorded'::text AS source FROM supplier_payments sp WHERE sp.supplier_id=$1 AND sp.is_demo=FALSE UNION ALL SELECT -b.id, b.bill_date, b.created_at, b.amount_paid, b.cash_paid,b.account_paid,b.id,'earlier bill payment' FROM dealer_bills b WHERE b.dealer_id=$1 AND b.deleted_at IS NULL AND b.amount_paid>0), ranked AS (SELECT p.*,SUM(p.amount) OVER(ORDER BY p.payment_date,p.created_at,p.id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS paid_through FROM payments p) SELECT ranked.id,to_char(ranked.payment_date,'YYYY-MM-DD') AS payment_date,ranked.created_at AS occurred_at,NULL::bigint AS sale_id,ranked.dealer_bill_id,ranked.amount::text,ranked.cash::text,ranked.account::text,GREATEST(base.total_due-(ranked.paid_through-ranked.amount),0)::text AS balance_before,GREATEST(base.total_due-ranked.paid_through,0)::text AS balance_after,ranked.source FROM ranked CROSS JOIN base ORDER BY ranked.payment_date DESC,ranked.created_at DESC,ranked.id DESC`,[id])).rows;}
+ @Get('books/paid-amounts') async allPaidAmounts(@Query('from') from?:string,@Query('to') to?:string){
+  for(const [label,value] of [['from',from],['to',to]] as const)if(value&&!/^\d{4}-\d{2}-\d{2}$/.test(value))throw new BadRequestException(`Invalid ${label} date`);
+  return (await pool.query(`WITH payments AS (
+   SELECT 'customer'::text AS party_type,p.name AS party_name,e.payment_date,e.occurred_at,
+    COALESCE(e.sale_id,cp.sale_id) AS bill_id,('GF-'||lpad(COALESCE(e.sale_id,cp.sale_id)::text,5,'0')) AS bill,
+    e.amount_change AS amount,e.cash_change AS cash,e.account_change AS account,e.discount_change AS discount,'recorded'::text AS source
+   FROM customer_payment_events e JOIN parties p ON p.id=e.customer_id
+   LEFT JOIN customer_opening_payments cp ON cp.id=e.opening_payment_id
+   WHERE e.voided_at IS NULL AND (e.opening_payment_id IS NULL OR cp.voided_at IS NULL)
+    AND (e.amount_change<>0 OR e.discount_change<>0)
+   UNION ALL
+   SELECT 'customer',p.name,COALESCE(o.payment_date,(cp.created_at AT TIME ZONE 'Asia/Kolkata')::date),cp.created_at,
+    cp.sale_id,('GF-'||lpad(cp.sale_id::text,5,'0')),cp.total,cp.cash,cp.account,cp.discount,'older payment'
+   FROM customer_opening_payments cp JOIN parties p ON p.id=cp.customer_id
+   LEFT JOIN customer_payment_date_overrides o ON o.customer_id=cp.customer_id AND o.source_type='older payment' AND o.source_id=cp.id
+   WHERE cp.voided_at IS NULL AND NOT EXISTS(SELECT 1 FROM customer_payment_events e WHERE e.opening_payment_id=cp.id)
+   UNION ALL
+   SELECT 'customer',p.name,COALESCE(o.payment_date,s.sale_date),s.created_at,s.id,
+    ('GF-'||lpad(s.id::text,5,'0')),
+    COALESCE((SELECT e.previous_paid FROM customer_payment_events e WHERE e.sale_id=s.id AND e.voided_at IS NULL ORDER BY e.id LIMIT 1),s.amount_paid),
+    (s.cash_paid-COALESCE((SELECT SUM(e.cash_change) FROM customer_payment_events e WHERE e.sale_id=s.id AND e.voided_at IS NULL),0)),
+    (s.account_paid-COALESCE((SELECT SUM(e.account_change) FROM customer_payment_events e WHERE e.sale_id=s.id AND e.voided_at IS NULL),0)),0,'earlier bill payment'
+   FROM sales s JOIN parties p ON p.id=s.retailer_id
+   LEFT JOIN customer_payment_date_overrides o ON o.customer_id=s.retailer_id AND o.source_type='earlier bill payment' AND o.source_id=s.id
+   WHERE s.deleted_at IS NULL AND COALESCE((SELECT e.previous_paid FROM customer_payment_events e WHERE e.sale_id=s.id AND e.voided_at IS NULL ORDER BY e.id LIMIT 1),s.amount_paid)>0
+   UNION ALL
+   SELECT 'dealer',p.name,sp.paid_on,sp.created_at,sp.dealer_bill_id,CASE WHEN sp.dealer_bill_id IS NULL THEN NULL ELSE 'DB-'||lpad(sp.dealer_bill_id::text,5,'0') END,
+    sp.amount,sp.cash_paid,sp.account_paid,0,'recorded'
+   FROM supplier_payments sp JOIN parties p ON p.id=sp.supplier_id WHERE sp.is_demo=FALSE AND sp.amount<>0
+   UNION ALL
+   SELECT 'dealer',p.name,b.bill_date,b.created_at,b.id,('DB-'||lpad(b.id::text,5,'0')),b.amount_paid,b.cash_paid,b.account_paid,0,'earlier bill payment'
+   FROM dealer_bills b JOIN parties p ON p.id=b.dealer_id WHERE b.deleted_at IS NULL AND b.amount_paid>0
+  )
+  SELECT party_type,party_name,to_char(payment_date,'YYYY-MM-DD') AS payment_date,occurred_at,bill_id,bill,
+   amount::text,cash::text,account::text,discount::text,source
+  FROM payments WHERE ($1::date IS NULL OR payment_date >= $1::date) AND ($2::date IS NULL OR payment_date <= $2::date)
+  ORDER BY payment_date DESC,occurred_at DESC,bill_id DESC NULLS LAST`,[from||null,to||null])).rows;
+ }
  @Get('sales') async sales(){return (await pool.query('SELECT s.*,p.name AS retailer FROM sales s JOIN parties p ON p.id=s.retailer_id ORDER BY s.id DESC')).rows;}
  @Post('retailers/:id/opening-payments') async openingPayment(@Param('id') id:string,@Body() d:OpeningPaymentDto){
   if(!/^\d+$/.test(id))throw new BadRequestException('Invalid customer');
